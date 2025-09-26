@@ -1,0 +1,134 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
+import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+
+export function Navbar() {
+  const [isMobileOpen, setIsMobileOpen] = React.useState(false);
+
+  return (
+    <nav className="w-full bg-gray-900/80 backdrop-blur-md border-b border-gray-800 text-white sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
+        {/* Brand */}
+        <Link
+          href="/"
+          className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent"
+        >
+          Stride
+        </Link>
+
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center gap-6">
+          <NavigationMenu>
+            <NavigationMenuList className="flex gap-6">
+              <NavigationMenuItem>
+                <Link href="/" passHref>
+                  <NavigationMenuLink asChild className="text-gray-300 hover:text-white transition">
+                    Home
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/about" passHref>
+                  <NavigationMenuLink asChild className="text-gray-300 hover:text-white transition">
+                    About
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/features" passHref>
+                  <NavigationMenuLink asChild className="text-gray-300 hover:text-white transition">
+                    Features
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
+
+          {/* Auth Links */}
+          <SignedOut>
+            <div className="flex gap-3">
+              <SignInButton mode="modal">
+                <Button variant="outline">Sign In</Button>
+              </SignInButton>
+              <Link href="/sign-up">
+                <Button>Sign Up</Button>
+              </Link>
+            </div>
+          </SignedOut>
+
+          <SignedIn>
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard">
+                <Button>Dashboard</Button>
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </div>
+          </SignedIn>
+        </div>
+
+        {/* Mobile Hamburger */}
+        <div className="md:hidden">
+          <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
+            <SheetTrigger asChild>
+              <button className="p-2 rounded-md hover:bg-gray-800">
+                <Menu className="h-6 w-6 text-gray-300" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="bg-gray-900 text-white">
+              <div className="flex flex-col gap-4 mt-6">
+                <Link href="/" className="block text-gray-300 hover:text-white">
+                  Home
+                </Link>
+                <Link
+                  href="/about"
+                  className="block text-gray-300 hover:text-white"
+                >
+                  About
+                </Link>
+                <Link
+                  href="/features"
+                  className="block text-gray-300 hover:text-white"
+                >
+                  Features
+                </Link>
+
+                <SignedOut>
+                  <div className="flex flex-col gap-2 mt-4">
+                    <SignInButton mode="modal">
+                      <Button className="w-full" variant="outline">
+                        Sign In
+                      </Button>
+                    </SignInButton>
+                    <Link href="/sign-up">
+                      <Button className="w-full">Sign Up</Button>
+                    </Link>
+                  </div>
+                </SignedOut>
+
+                <SignedIn>
+                  <div className="flex flex-col gap-2 mt-4">
+                    <Link href="/dashboard">
+                      <Button className="w-full">Dashboard</Button>
+                    </Link>
+                    <UserButton afterSignOutUrl="/" />
+                  </div>
+                </SignedIn>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+    </nav>
+  );
+}
