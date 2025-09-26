@@ -72,7 +72,7 @@ export function Navbar() {
               <Link href="/dashboard">
                 <Button>Dashboard</Button>
               </Link>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton />
             </div>
           </SignedIn>
         </div>
@@ -121,7 +121,7 @@ export function Navbar() {
                     <Link href="/dashboard">
                       <Button className="w-full">Dashboard</Button>
                     </Link>
-                    <UserButton afterSignOutUrl="/" />
+                    <UserButton />
                   </div>
                 </SignedIn>
               </div>
