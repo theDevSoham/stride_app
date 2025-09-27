@@ -135,15 +135,17 @@ export default function DashboardPage() {
   }
 
   // summarize
-  async function summarizeTask(task: Task) {
+  async function summarizeTask(task: Task, force = false) {
     setSummarizing(true);
     try {
       const res = await fetch("/api/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: task.id, // ✅ include ID
           title: task.title,
           description: task.description,
+          force, // ✅ support regenerate option
         }),
       });
       if (!res.ok) throw new Error("Failed to summarize");
@@ -173,12 +175,12 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex sm:items-center items-start gap-2 w-full sm:w-auto sm:flex-row flex-col">
               <Input
                 placeholder="Search tasks..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full md:w-80"
+                className="w-full sm:w-80"
               />
               <Button onClick={() => setOpenDialog(true)} className="ml-2">
                 <Plus className="mr-2 h-4 w-4" /> New
@@ -243,11 +245,19 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-end gap-2">
                               <Button
                                 variant="ghost"
-                                onClick={() => summarizeTask(t)}
+                                onClick={() => summarizeTask(t)} // default → reuse existing
                                 disabled={summarizing}
                               >
                                 <Sparkles className="h-4 w-4 mr-1" />
                                 {summarizing ? "..." : "Summarize"}
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                onClick={() => summarizeTask(t, true)} // force → regenerate
+                                disabled={summarizing}
+                              >
+                                🔄 Regenerate
                               </Button>
                               <Button
                                 variant="ghost"
@@ -282,10 +292,10 @@ export default function DashboardPage() {
                 ) : (
                   filtered.map((t) => (
                     <div key={t.id} className="p-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between sm:flex-row flex-col gap-6 sm:gap-0">
                         <div>
-                          <div className="font-medium">{t.title}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="font-medium text-xl">{t.title}</div>
+                          <div className="text-md text-muted-foreground">
                             {t.description ?? ""}
                           </div>
                           <div className="mt-2 text-xs text-muted-foreground">
@@ -361,9 +371,11 @@ export default function DashboardPage() {
               <DialogTitle>Task Summary</DialogTitle>
               <DialogDescription>Generated with Gemini AI</DialogDescription>
             </DialogHeader>
+
             <div className="mt-2 whitespace-pre-line text-sm">
               {summary ?? "No summary available"}
             </div>
+
             <div className="flex justify-end mt-4">
               <Button onClick={() => setOpenSummaryDialog(false)}>Close</Button>
             </div>

@@ -12,6 +12,22 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { DialogTitle } from "./ui/dialog";
+
+const linksArr = [
+  {
+    name: "Home",
+    link: "/",
+  },
+  {
+    name: "About",
+    link: "/about",
+  },
+  {
+    name: "Features",
+    link: "/features",
+  },
+];
 
 export function Navbar() {
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
@@ -31,27 +47,18 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-6">
           <NavigationMenu>
             <NavigationMenuList className="flex gap-6">
-              <NavigationMenuItem>
-                <Link href="/" passHref>
-                  <NavigationMenuLink asChild className="text-gray-300 hover:text-white transition">
-                    Home
+              {linksArr.map((item) => (
+                <NavigationMenuItem key={item.link}>
+                  <NavigationMenuLink asChild>
+                    <Link
+                      href={item.link}
+                      className="text-gray-300 hover:text-white transition"
+                    >
+                      {item.name}
+                    </Link>
                   </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link href="/about" passHref>
-                  <NavigationMenuLink asChild className="text-gray-300 hover:text-white transition">
-                    About
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link href="/features" passHref>
-                  <NavigationMenuLink asChild className="text-gray-300 hover:text-white transition">
-                    Features
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
+                </NavigationMenuItem>
+              ))}
             </NavigationMenuList>
           </NavigationMenu>
 
@@ -85,23 +92,18 @@ export function Navbar() {
                 <Menu className="h-6 w-6 text-gray-300" />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="bg-gray-900 text-white">
+            <SheetContent side="right" className="bg-gray-900 text-white p-4">
+              <DialogTitle className="text-lg font-semibold">Menu</DialogTitle>
               <div className="flex flex-col gap-4 mt-6">
-                <Link href="/" className="block text-gray-300 hover:text-white">
-                  Home
-                </Link>
-                <Link
-                  href="/about"
-                  className="block text-gray-300 hover:text-white"
-                >
-                  About
-                </Link>
-                <Link
-                  href="/features"
-                  className="block text-gray-300 hover:text-white"
-                >
-                  Features
-                </Link>
+                {linksArr.map((item) => (
+                  <Link
+                    key={`${item.link}_mobile`}
+                    href={item.link}
+                    className="block text-gray-300 hover:text-white"
+                  >
+                    {item.name}
+                  </Link>
+                ))}
 
                 <SignedOut>
                   <div className="flex flex-col gap-2 mt-4">

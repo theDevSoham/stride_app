@@ -19,6 +19,14 @@ const TaskCreateSchema = z.object({
 
 const TaskUpdateSchema = TaskCreateSchema.partial();
 
+// ------------------- Validation Schema for Summarize -------------------
+const TaskSummarizeSchema = z.object({
+  id: z.string().min(1, "Task id is required"),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  force: z.boolean().optional().default(false),
+});
+
 // ------------------- CRUD APIs -------------------
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
@@ -139,33 +147,64 @@ export async function DELETE(req: NextRequest) {
 // ------------------- Summarize Endpoint -------------------
 export async function PATCH(req: NextRequest) {
   const { userId } = await auth();
-  if (!userId)
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const body = await req.json();
-    const { title, description } = body;
 
-    if (!title && !description) {
+    // ✅ Validate request body strictly
+    const { id, title, description, force } = TaskSummarizeSchema.parse(body);
+
+    // ✅ Fetch existing summary
+    const task = await prisma.task.findFirst({
+      where: { id, userId },
+      select: { summary: true },
+    });
+
+    if (!task) {
       return NextResponse.json(
-        { error: "Title or description is required" },
-        { status: 400 }
+        { error: "Task not found or not yours" },
+        { status: 404 }
       );
     }
 
+    // ✅ If summary already exists and force is false → return it
+    if (task.summary && !force) {
+      return NextResponse.json({ summary: task.summary });
+    }
+
+    // ✅ Generate new summary
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `You are a helpful assistant. Summarize the following task in 2-3 concise sentences:\n\nTitle: ${title}\nDescription: ${
       description ?? ""
     }`;
 
     const result = await model.generateContent(prompt);
-    const summary = result.response.text();
+    const summary = result.response.text().trim();
+
+    if (!summary) {
+      return NextResponse.json(
+        { error: "Failed to generate summary" },
+        { status: 500 }
+      );
+    }
+
+    // ✅ Update DB with new summary
+    await prisma.task.update({
+      where: { id },
+      data: { summary },
+    });
 
     return NextResponse.json({ summary });
-  } catch (err: any) {
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ errors: err.errors }, { status: 400 });
+    }
     console.error("Summarize error:", err);
     return NextResponse.json(
-      { error: "Failed to generate summary" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
