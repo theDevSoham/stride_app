@@ -1,9 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+// ------------------- Validation Schemas -------------------
 const TaskCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
@@ -14,9 +19,9 @@ const TaskCreateSchema = z.object({
 
 const TaskUpdateSchema = TaskCreateSchema.partial();
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// ------------------- CRUD APIs -------------------
 export async function GET(req: NextRequest) {
-  const { userId } = await auth(); // get userId from Clerk session
+  const { userId } = await auth();
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
         dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
         priority: parsed.priority ?? "MEDIUM",
         tags: parsed.tags ?? [],
-        user: { connect: { id: userId } }, // use authenticated user
+        user: { connect: { id: userId } },
       },
     });
 
@@ -74,7 +79,6 @@ export async function PUT(req: NextRequest) {
 
     const parsed = TaskUpdateSchema.parse(updates);
 
-    // Only allow updating tasks that belong to the user
     const updated = await prisma.task.updateMany({
       where: { id, userId },
       data: {
@@ -129,5 +133,40 @@ export async function DELETE(req: NextRequest) {
   } catch (err: any) {
     console.log(err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+// ------------------- Summarize Endpoint -------------------
+export async function PATCH(req: NextRequest) {
+  const { userId } = await auth();
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { title, description } = body;
+
+    if (!title && !description) {
+      return NextResponse.json(
+        { error: "Title or description is required" },
+        { status: 400 }
+      );
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = `You are a helpful assistant. Summarize the following task in 2-3 concise sentences:\n\nTitle: ${title}\nDescription: ${
+      description ?? ""
+    }`;
+
+    const result = await model.generateContent(prompt);
+    const summary = result.response.text();
+
+    return NextResponse.json({ summary });
+  } catch (err: any) {
+    console.error("Summarize error:", err);
+    return NextResponse.json(
+      { error: "Failed to generate summary" },
+      { status: 500 }
+    );
   }
 }

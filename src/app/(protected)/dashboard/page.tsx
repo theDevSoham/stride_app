@@ -15,7 +15,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash, Edit, Plus } from "lucide-react";
+import { Trash, Edit, Plus, Sparkles } from "lucide-react";
 
 type Task = {
   id: string;
@@ -51,18 +51,21 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
+
   const [openDialog, setOpenDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Fetch tasks for the authenticated user
+  // summarize states
+  const [summary, setSummary] = useState<string | null>(null);
+  const [openSummaryDialog, setOpenSummaryDialog] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+
+  // Fetch tasks
   async function loadTasks() {
     setLoading(true);
     try {
-      const res = await fetch("/api/tasks", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await fetch("/api/tasks", { method: "GET" });
       if (!res.ok) throw new Error("Failed to fetch tasks");
       const data = await res.json();
       setTasks(data || []);
@@ -74,12 +77,11 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) return;
+    if (!isLoaded || !isSignedIn) return;
     loadTasks();
   }, [isLoaded, isSignedIn]);
 
-  // client-side filtered tasks
+  // filter tasks
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return tasks;
@@ -92,69 +94,69 @@ export default function DashboardPage() {
     });
   }, [tasks, search]);
 
-  // Create or update
+  // save (create/update)
   async function saveTask(payload: Partial<Task> & { id?: string }) {
     setSaving(true);
     try {
       if (payload.id) {
-        // update
-        const res = await fetch("/api/tasks", {
+        await fetch("/api/tasks", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error("Failed to update task");
-        // reload or optimistic update
-        await loadTasks();
       } else {
-        // create
-        const body = { ...payload };
-        const res = await fetch("/api/tasks", {
+        await fetch("/api/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+          body: JSON.stringify(payload),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => null);
-          console.error("create error", err);
-          throw new Error("Failed to create task");
-        }
-        await loadTasks();
       }
+      await loadTasks();
       setOpenDialog(false);
       setEditingTask(null);
     } catch (err) {
       console.error(err);
-      // optionally show toast
     } finally {
       setSaving(false);
     }
   }
 
-  // Delete
+  // delete
   async function deleteTask(id: string) {
     if (!confirm("Delete this task?")) return;
     try {
-      const res = await fetch(`/api/tasks?id=${encodeURIComponent(id)}`, {
+      await fetch(`/api/tasks?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete");
       await loadTasks();
     } catch (err) {
       console.error(err);
     }
   }
 
-  // open create dialog
-  function openCreate() {
-    setEditingTask(emptyTask());
-    setOpenDialog(true);
-  }
-
-  // open edit dialog
-  function openEdit(task: Task) {
-    setEditingTask(task);
-    setOpenDialog(true);
+  // summarize
+  async function summarizeTask(task: Task) {
+    setSummarizing(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: task.title,
+          description: task.description,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to summarize");
+      const data = await res.json();
+      setSummary(data.summary || "No summary generated");
+      setOpenSummaryDialog(true);
+    } catch (err) {
+      console.error(err);
+      setSummary("Error generating summary");
+      setOpenSummaryDialog(true);
+    } finally {
+      setSummarizing(false);
+    }
   }
 
   return (
@@ -173,12 +175,12 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-2 w-full md:w-auto">
               <Input
-                placeholder="Search tasks by title, description or tag..."
+                placeholder="Search tasks..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full md:w-80"
               />
-              <Button onClick={openCreate} className="ml-2" variant="default">
+              <Button onClick={() => setOpenDialog(true)} className="ml-2">
                 <Plus className="mr-2 h-4 w-4" /> New
               </Button>
             </div>
@@ -241,7 +243,18 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-end gap-2">
                               <Button
                                 variant="ghost"
-                                onClick={() => openEdit(t)}
+                                onClick={() => summarizeTask(t)}
+                                disabled={summarizing}
+                              >
+                                <Sparkles className="h-4 w-4 mr-1" />
+                                {summarizing ? "..." : "Summarize"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingTask(t);
+                                  setOpenDialog(true);
+                                }}
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -282,9 +295,20 @@ export default function DashboardPage() {
                         <div className="flex flex-col items-end gap-2">
                           <div className="flex gap-2">
                             <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => summarizeTask(t)}
+                              disabled={summarizing}
+                            >
+                              <Sparkles className="h-4 w-4" />
+                            </Button>
+                            <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => openEdit(t)}
+                              onClick={() => {
+                                setEditingTask(t);
+                                setOpenDialog(true);
+                              }}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -306,10 +330,9 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Dialog for create / edit */}
+        {/* Task Form Dialog */}
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogTrigger asChild>
-            {/* hidden trigger — we open programmatically */}
             <span />
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
@@ -319,18 +342,31 @@ export default function DashboardPage() {
               </DialogTitle>
               <DialogDescription>Add details for your task.</DialogDescription>
             </DialogHeader>
-
             <TaskForm
               initial={editingTask ?? emptyTask()}
               onCancel={() => {
                 setOpenDialog(false);
                 setEditingTask(null);
               }}
-              onSave={async (data) => {
-                await saveTask(data);
-              }}
+              onSave={saveTask}
               saving={saving}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Summary Dialog */}
+        <Dialog open={openSummaryDialog} onOpenChange={setOpenSummaryDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Task Summary</DialogTitle>
+              <DialogDescription>Generated with Gemini AI</DialogDescription>
+            </DialogHeader>
+            <div className="mt-2 whitespace-pre-line text-sm">
+              {summary ?? "No summary available"}
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button onClick={() => setOpenSummaryDialog(false)}>Close</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -338,8 +374,7 @@ export default function DashboardPage() {
   );
 }
 
-/* -------- TaskForm component (internal) -------- */
-
+/* -------- TaskForm component -------- */
 function TaskForm({
   initial,
   onSave,
@@ -365,7 +400,6 @@ function TaskForm({
   const [tagsText, setTagsText] = useState((initial.tags || []).join(", "));
 
   useEffect(() => {
-    // when initial changes (editing different item), sync form
     setTitle(initial.title ?? "");
     setDescription(initial.description ?? "");
     setDueDate(initial.dueDate ?? undefined);
@@ -381,7 +415,7 @@ function TaskForm({
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const payload: Partial<Task> & { id?: string } = {
+    await onSave({
       id: (initial as any).id,
       title,
       description,
@@ -389,8 +423,7 @@ function TaskForm({
       priority,
       status,
       tags,
-    };
-    await onSave(payload);
+    });
   }
 
   return (
@@ -403,7 +436,6 @@ function TaskForm({
           required
         />
       </div>
-
       <div>
         <label className="block text-sm font-medium mb-1">Description</label>
         <textarea
@@ -413,7 +445,6 @@ function TaskForm({
           className="w-full rounded-md p-2 border bg-transparent"
         />
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="block text-sm font-medium mb-1">Due</label>
@@ -423,7 +454,6 @@ function TaskForm({
             onChange={(e) => setDueDate(e.target.value || undefined)}
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Priority</label>
           <select
@@ -436,7 +466,6 @@ function TaskForm({
             <option value="HIGH">High</option>
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium mb-1">Status</label>
           <select
@@ -450,14 +479,12 @@ function TaskForm({
           </select>
         </div>
       </div>
-
       <div>
         <label className="block text-sm font-medium mb-1">
           Tags (comma separated)
         </label>
         <Input value={tagsText} onChange={(e) => setTagsText(e.target.value)} />
       </div>
-
       <div className="flex items-center justify-end gap-2">
         <Button variant="secondary" type="button" onClick={onCancel}>
           Cancel
