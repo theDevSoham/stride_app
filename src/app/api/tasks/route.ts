@@ -153,7 +153,9 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const allModels = await genAI
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `You are a helpful assistant. Summarize the following task in 2-3 concise sentences:\n\nTitle: ${title}\nDescription: ${
       description ?? ""
     }`;
