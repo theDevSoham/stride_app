@@ -17,7 +17,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="text-center max-w-4xl space-y-6">
         <h1 className="text-5xl md:text-6xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-400">
-          🚀 SmartTask
+          🚀 Stride
         </h1>
         <p className="text-lg md:text-xl text-gray-300">
           Organize your tasks efficiently, boost productivity, and never miss a
