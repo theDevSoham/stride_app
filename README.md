@@ -1,9 +1,3 @@
-Perfect — let’s craft a **detailed and beautiful README** for your project.
-I’ll give you a markdown version that looks professional, highlights features, usage, and design philosophy, and matches the **Stride** branding you used.
-
-Here’s the full `README.md`:
-
-````markdown
 # 🚀 Stride – AI-powered Task Management
 
 Simplify productivity with **Stride**, an AI-powered task management platform that helps you stay focused, organized, and efficient.  
@@ -149,12 +143,3 @@ You are free to use, modify, and distribute this software.
 
 **Stride** was created with the mission to **simplify productivity** using AI-powered task management.
 Crafted with ❤️ by [Soham Das](https://linkedin.com/in/thedevsoham).
-
-```
-
----
-
-This will render beautifully on GitHub with emojis, sections, and screenshots (`about-hero.png` already fits).  
-
-👉 Do you also want me to add **badges** (like GitHub stars, forks, Next.js, Tailwind, Vercel) at the top for extra polish?
-```
